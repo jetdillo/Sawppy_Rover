@@ -15,26 +15,17 @@ module clamp() {
 module k() {
     difference() {
         union() {
-            import("Steering Knuckle.stl");
-            translate([-80, 17.5, -16]) {
-                cube(size = [50, 2.5, 55]);
+            import("Fixed Knuckle.stl");
+            translate([-80, -20, -16]) {
+                cube(size = [50, 2.5, 29]);
             }
-
-            translate([-80, 17.5, 39]) {
-                rotate([0, 45, 0]) {
-                    cube(size = [25, 2.5, 18]);
-                }
-            }
-
 
             translate([-80, -20, -16]) {
                 cube(size = [15, 37.5, 31]);
             }
 
             translate([-32, 0, 0]) {
-                rotate([180, 0, 0]) {
-                    clamp();
-                }
+                clamp();
             }
         }
         translate([-80, 0, 0]) {
@@ -108,28 +99,22 @@ module h1() {
 
 difference() {
     k();
-    rotate([180, 0, 0]) {
-        translate([-24.5, 0, -15.5]) {
-            h();
-        }
+    translate([-24.5, 0, -15.5]) {
+        h();
     }
-    rotate([180, 0, 0]) {
-        translate([-24.5, 0, 15.5]) {
-            h();
-        }
+    translate([-24.5, 0, 15.5]) {
+        h();
     }
 }
 
-rotate([180, 0, 0]) {
-    translate([40, 0, 0]) {
-        difference() {
-            clamp();
-            translate([7.5, 0, -15.5]) {
-                h1();
-            }
-            translate([7.5, 0, 15.5]) {
-                h1();
-            }
+translate([40, 0, 0]) {
+    difference() {
+        clamp();
+        translate([7.5, 0, -15.5]) {
+            h1();
+        }
+        translate([7.5, 0, 15.5]) {
+            h1();
         }
     }
 }
