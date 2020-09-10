@@ -23,6 +23,6 @@ More info [here](Marco_Walther/README.md)
 
 ## jetdillo
 
-* Tenacity : A Sawppy rover meant to be a testbed for roving ruggedized terrain
+* Tenacity : A Sawppy rover meant to be a testbed for roving rugged terrain
 * Modified AX-12 brackets, steering hubs, motor couplers and wheel hubs for different tolerances for the heat inserts
 
