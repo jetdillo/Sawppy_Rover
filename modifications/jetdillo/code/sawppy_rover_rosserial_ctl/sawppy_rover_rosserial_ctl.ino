@@ -8,11 +8,17 @@
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
+#include <sensor_msgs/Range.h>
 
 geometry_msgs::TransformStamped t;
 tf::TransformBroadcaster broadcaster;
 
 //#include <ArduinoHardware.h>
+
+    #define rf_sonar 0
+    #define lf_sonar 1
+    #define cf_sonar 2
+    
 
     #define enable_A 2
     #define enable_B 4
@@ -34,8 +40,7 @@ tf::TransformBroadcaster broadcaster;
     #define F1 43  //Right Rear IN1
     #define F2 45  //Right Rear IN2
 
-
-    #define encoder_1_A 38
+    #define encoder_1_A 38    
     #define encoder_1_B 40
     
     #define encoder_2_A 42
@@ -50,7 +55,7 @@ tf::TransformBroadcaster broadcaster;
     #define SPEED_MIN 50
     #define SPEED_CRUISE 75
     #define SPEED_FAST 90
-    #define SPEED_MAX 120
+    #define SPEED_MAX 180
 
     #define DRIVE_FWD 10
     #define DRIVE_REV 20
@@ -68,80 +73,104 @@ tf::TransformBroadcaster broadcaster;
     #define STEER_LEFT_MIN 140
     #define STEER_RIGHT_MAX 615
 
+
 /* 
  *   Motor labeling/numbering is as follows:
  *      FRONT
- *   [1]     [2]
+ *  [1][A] [2][B]
  *    \\   //
- *   [3]== ==[4]
+ *[3][C]== ==[4][D]
  *    //   \\
- *   [5]     [6]
+ *[5][E]     [6][F]                                              
  *      REAR
  */
 
     int rotDirection = 0;
     int pressed = false;
 
-   // int motor_dir_ctl[6][2]={ {39,41},{43,45},{31,33},{35,37},{A1,A2},{C3,29} };
     int motor_dir_ctl[6][2]={ {A1,A2},{B1,B2},{C3,C4},{D3,D4},{F1,F2},{E1,E2} };
-   // int motor_speed_ctl[6]={8,9,10,11,12,13};
     int motor_speed_ctl[6]={enable_A,enable_B,enable_C,enable_D,enable_E,enable_F};
     int corner_steering[4]={FRONT_LEFT_SERVO,FRONT_RIGHT_SERVO,BACK_LEFT_SERVO,BACK_RIGHT_SERVO};
    
     float twist_linear=0.0;
+    float twist_angular=0.0;
     
 // variables will change:
-int buttonState = 0;         // variable for reading the pushbutton status
+    int buttonState = 0;         // variable for reading the pushbutton status
 
-unsigned long e3a_ts;
-unsigned long e3b_ts;
-unsigned long e4a_ts;
-unsigned long e4b_ts;
+    int buttons[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+    boolean skid_state = false;
+    int skid_dir = 0;
+    unsigned long e3a_ts;
+    unsigned long e3b_ts;
+    unsigned long e4a_ts;
+    unsigned long e4b_ts;
+
+sensor_msgs::Range range_msg_lf; 
+sensor_msgs::Range range_msg_rf;
+sensor_msgs::Range range_msg_cf;
+    
+ros::Publisher pub_range_lf( "/ultrasound/lf", &range_msg_lf);
+ros::Publisher pub_range_rf("/ultrasound/rf", &range_msg_rf);
+ros::Publisher pub_range_cf("/ultrasound/cf",&range_msg_cf);
 
 ros::NodeHandle nh;
+
+char frameid[]="/ultrasound";
 
 //int lticks,rticks;
 
 void TwistCb(const geometry_msgs::Twist& vel_msg) { 
      twist_linear=(float)vel_msg.linear.x;
+     twist_angular=(float)vel_msg.angular.z;
 }
 
-void leftCb() { 
-    int aval=digitalRead(encoder_3_A);
-    int bval=digitalRead(encoder_3_B);
-    Serial2.print("leftCB:" );
-    if (bval
-}
+void sonar_sweep() { 
 
-void rightCb() { 
+    sensor_msgs::Range sm[3];
+    for (int i=0;i < 3;i++) { 
+      sm[i].range=read_sonar(i);
+      sm[i].radiation_type = sensor_msgs::Range::ULTRASOUND;
+      sm[i].header.frame_id =  frameid;
+      sm[i].field_of_view = 0.1;  // fake
+      sm[i].min_range = 0.0;
+      sm[i].max_range = 6.47;
+      delay(50);
+    }
 
-   int aval=digitalRead(encoder_4_A);
-   int bval=digitalRead(encoder_4_B);
-   Serial2.print("rightCB:");
+    range_msg_rf= sm[0];
+    range_msg_lf= sm[1];
+    range_msg_cf= sm[2];
+
+    pub_range_lf.publish(&range_msg_lf);
+    pub_range_rf.publish(&range_msg_rf);
+    pub_range_cf.publish(&range_msg_cf);
     
 }
 
+float read_sonar(int pin_num){
+  int val = 0;
+  for(int i=0; i<4; i++) val += analogRead(pin_num);
+  float range =  val;
+  return range /322.519685;   // (0.0124023437 /4) ; //cvt to meters
+}
+
 ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", TwistCb);
+
+//ros::Subscriber<sensor_msgs::Joy> sub("joy", JoyModeCb);
 
     void setup() {
 
       nh.initNode();
       nh.subscribe(sub);
+      nh.advertise(pub_range_lf);
+      nh.advertise(pub_range_rf);
+      nh.advertise(pub_range_cf);
       
       for (int k=2; k<=8;k++) { 
         pinMode(k,OUTPUT);
       }
-        
-        pinMode(encoder_3_A,INPUT_PULLUP);
-        pinMode(encoder_3_B,INPUT_PULLUP);
-        pinMode(encoder_4_A,INPUT_PULLUP);
-        pinMode(encoder_4_B,INPUT_PULLUP);
 
-        attachInterrupt(digitalPinToInterrupt(encoder_3_A), leftCb, CHANGE);
-        attachInterrupt(digitalPinToInterrupt(encoder_3_B), leftCb, CHANGE);
-        attachInterrupt(digitalPinToInterrupt(encoder_4_A), rightCb, CHANGE);
-        attachInterrupt(digitalPinToInterrupt(encoder_4_B), rightCb, CHANGE);
-        
        // Set initial rotation direction
        // Serial.begin(115200);
        // Open serial port to receive commands
@@ -154,17 +183,17 @@ ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", TwistCb);
  
  void loop() {
 
-    int drive_cmd=1024;
-    float drive_speed=0.0;
-    int drive_dir=0;
+     int drive_cmd=1024;
+     float drive_speed=0.0;
+     int drive_dir=0;
      int dirbtn=0;
 
       drive_speed = twist_linear * SPEED_MAX;
       //Serial2.println(drive_speed);
       
        if (drive_speed >0) {
-           Serial2.print("FORWARD ");
-           Serial2.println(drive_speed);
+         //  Serial2.print("FORWARD ");
+         //  Serial2.println(drive_speed);
           
            digitalWrite(23,LOW);
            digitalWrite(25,HIGH);
@@ -196,12 +225,12 @@ ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", TwistCb);
            analogWrite(6,(int)drive_speed);
            analogWrite(7,(int)drive_speed);
          
-           delay(100);
+         //  delay(10);
            
        }
        if (drive_speed < 0) {
-          Serial2.print("REVERSE ");
-          Serial2.println(drive_speed);
+         // Serial2.print("REVERSE ");
+         // Serial2.println(drive_speed);
            
            digitalWrite(23,HIGH);
            digitalWrite(25,LOW);
@@ -234,16 +263,18 @@ ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", TwistCb);
            analogWrite(6,(int)(drive_speed*-1));
            analogWrite(7,(int)(drive_speed*-1));
            
-           delay(100);
+          // delay(10);
        }
 
        if (drive_speed == 0) {
             for(int i =0; i < 6; i++) { 
-              digitalWrite(motor_dir_ctl[i][0],LOW);
-              digitalWrite(motor_dir_ctl[i][1],LOW);
-              analogWrite(motor_speed_ctl[i],0);
-           }
-            delay(100);
+                 digitalWrite(motor_dir_ctl[i][0],LOW);
+                 digitalWrite(motor_dir_ctl[i][1],LOW);
+                 analogWrite(motor_speed_ctl[i],0);
+              }
+            //delay(10);
        }
+       sonar_sweep();
+       //delay(10);
        nh.spinOnce();
 }

@@ -11,6 +11,13 @@
         name="serial_node">
         args="$(port)"
     </node>
+   
+    <!-- start corner_steering node -->
+    <node 
+        pkg="tenacity_ros"
+        type="teleop_corner_twist.py"
+        name="teleop_corner_twist">
+     </node>
 
     <!-- start teleop_twist interface -->
     <include file="$(find teleop_twist_joy)/launch/teleop.launch">
@@ -22,4 +29,15 @@
     <include file="$(find my_dynamixel_tutorial)/start_tilt_controller.launch">
     </include>
 
+    <!-- start urg laser node -->
+    <!-- <include file="$(find urg_node)/launch/urg_lidar.launch"> --> 
+    <!-- </include> -->
+     
+    <!-- start microstrain IMU --> 
+    <include file="$(find ros_mscl)/launch/microstrain.launch">
+    <arg name="port" value="/dev/ttyACM1"/>
+    </include> 
+ 
+    <include file="$(find sweep_ros)/launch/sweep2scan.launch">
+    </include>
 </launch>
